@@ -3372,21 +3372,18 @@ bool TWPartitionManager::Prepare_Empty_Folder(const std::string& Folder) {
 	return TWFunc::Recursive_Mkdir(Folder);
 }
 
-std::string TWPartitionManager::Get_Bare_Partition_Name(std::string Mount_Point) {
-	if (Mount_Point == "/system_root")
-		return "system";
-	else
-		return TWFunc::Remove_Beginning_Slash(Mount_Point);
-}
-
 bool TWPartitionManager::Prepare_Super_Volume(TWPartition* twrpPart) {
     Fstab fstab;
 	std::string bare_partition_name = Get_Bare_Partition_Name(twrpPart->Get_Mount_Point());
 
-	Super_Partition_List.push_back(bare_partition_name);
+	if (twrpPart->Get_Mount_Point() == "/system_root")
+		bare_partition_name = "system";
+	else
+		bare_partition_name = TWFunc::Remove_Beginning_Slash(twrpPart->Get_Mount_Point());
+		
 	LOGINFO("Trying to prepare %s from super partition\n", bare_partition_name.c_str());
 
-	std::string blk_device_partition;
+std::string blk_device_partition;
 #ifdef AB_OTA_UPDATER
 	blk_device_partition = bare_partition_name + PartitionManager.Get_Active_Slot_Suffix();
 #else
@@ -3435,6 +3432,20 @@ bool TWPartitionManager::Prepare_All_Super_Volumes() {
 	}
 	Update_System_Details();
 	return status;
+}
+
+bool TWPartitionManager::Is_Super_Partition(const char* fstab_line) {
+	if (!Get_Super_Status())
+		return false;
+	std::vector<std::string> super_partition_list = {"system", "vendor", "odm", "product", "system_ext"};
+
+	for (auto&& fstab_partition_check: super_partition_list) {
+		if (strncmp(fstab_line, fstab_partition_check.c_str(), fstab_partition_check.size()) == 0) {
+			DataManager::SetValue(TW_IS_SUPER, "1");
+			return true;
+		}
+	}
+	return false;
 }
 
 std::string TWPartitionManager::Get_Super_Partition() {
@@ -3567,8 +3578,7 @@ bool TWPartitionManager::Unmap_Super_Devices() {
 		LOGINFO("Checking partition: %s\n", (*iter)->Get_Mount_Point().c_str());
 		if ((*iter)->Is_Super) {
 			TWPartition *part = *iter;
-			std::string bare_partition_name = Get_Bare_Partition_Name((*iter)->Get_Mount_Point());
-			std::string blk_device_partition = bare_partition_name + PartitionManager.Get_Active_Slot_Suffix();
+			std::string blk_device_partition;
 			(*iter)->UnMount(false);
 			LOGINFO("removing dynamic partition: %s\n", blk_device_partition.c_str());
 			destroyed = DestroyLogicalPartition(blk_device_partition);

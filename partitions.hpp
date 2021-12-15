@@ -392,7 +392,6 @@ public:
 	void read_uevent();                                                       // Reads uevent data into a buffer
 	void close_uevent();                                                      // Closes the uevent netlink socket
 	void Add_Partition(TWPartition* Part);                                    // Adds a new partition to the Partitions vector
-	std::string Get_Bare_Partition_Name(std::string Mount_Point);
     bool Prepare_Super_Volume(TWPartition* twrpPart);					  	  // Prepare logical super partition volume for mounting
 	std::string Get_Super_Partition();										  // Get Super Partition block device path
 	void Setup_Super_Devices();												  // Setup logical dm devices on super partition
